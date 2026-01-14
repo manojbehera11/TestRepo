@@ -1,1 +1,1 @@
-Jira: xxxxxx
+Required Jira: xxxxxx
