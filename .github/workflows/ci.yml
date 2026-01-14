@@ -1,7 +1,62 @@
-name: CI
-on: push
+name: Create PR Link in Jira
+
+on:
+  pull_request:
+    types: [opened]
+
 jobs:
-  test:
+  link-jira:
     runs-on: ubuntu-latest
+
     steps:
-      - run: echo "Hello"
+      - name: Extract Jira ID from PR template
+        id: jira
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const match = body.match(/[A-Z][A-Z0-9]+-\d+/);
+
+            if (!match) {
+              core.setFailed('No Jira issue key found in PR template');
+              return;
+            }
+
+            core.setOutput('jira_key', match[0]);
+
+      - name: Create PR link in Jira
+        run: |
+          curl -X POST \
+            -u "${{ secrets.JIRA_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.jira.outputs.jira_key }}/comment" \
+            -d '{
+              "body": {
+                "type": "doc",
+                "version": 1,
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "Pull Request created: "
+                      },
+                      {
+                        "type": "text",
+                        "text": "${{ github.event.pull_request.html_url }}",
+                        "marks": [
+                          {
+                            "type": "link",
+                            "attrs": {
+                              "href": "${{ github.event.pull_request.html_url }}"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }'
+
