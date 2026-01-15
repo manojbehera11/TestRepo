@@ -28,6 +28,7 @@ jobs:
         run: |
           JIRA_KEY=${{ steps.jira.outputs.jira_key }}
           PR_URL=${{ github.event.pull_request.html_url }}
+          JIRA_URL="${{ secrets.JIRA_BASE_URL }}/browse/$JIRA_KEY"
 
           curl -X POST \
             -u "${{ secrets.JIRA_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
@@ -53,6 +54,22 @@ jobs:
                             \"type\": \"link\",
                             \"attrs\": {
                               \"href\": \"$PR_URL\"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        \"type\": \"text\",
+                        \"text\": \" | Jira Issue: \"
+                      },
+                      {
+                        \"type\": \"text\",
+                        \"text\": \"$JIRA_KEY\",
+                        \"marks\": [
+                          {
+                            \"type\": \"link\",
+                            \"attrs\": {
+                              \"href\": \"$JIRA_URL\"
                             }
                           }
                         ]
