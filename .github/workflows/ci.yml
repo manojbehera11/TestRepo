@@ -30,7 +30,7 @@ jobs:
             }
 
             const jiraKey = match[0];
-            const jiraUrl = `${process.env.JIRA_BASE_URL}/browse/${jiraKey}`;
+            const jiraUrl = `${secrets.JIRA_BASE_URL}/browse/${jiraKey}`;
             const jiraLink = `[${jiraKey}](${jiraUrl})`;
 
             // Replace plain Jira ID with hyperlink
