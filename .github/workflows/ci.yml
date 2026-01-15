@@ -26,30 +26,33 @@ jobs:
 
       - name: Create PR link in Jira
         run: |
+          JIRA_KEY=${{ steps.jira.outputs.jira_key }}
+          PR_URL=${{ github.event.pull_request.html_url }}
+
           curl -X POST \
             -u "${{ secrets.JIRA_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.jira.outputs.jira_key }}/comment" \
-            -d '{
-              "body": {
-                "type": "doc",
-                "version": 1,
-                "content": [
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/$JIRA_KEY/comment" \
+            -d "{
+              \"body\": {
+                \"type\": \"doc\",
+                \"version\": 1,
+                \"content\": [
                   {
-                    "type": "paragraph",
-                    "content": [
+                    \"type\": \"paragraph\",
+                    \"content\": [
                       {
-                        "type": "text",
-                        "text": "Pull Request created: "
+                        \"type\": \"text\",
+                        \"text\": \"Pull Request created: \"
                       },
                       {
-                        "type": "text",
-                        "text": "${{ github.event.pull_request.html_url }}",
-                        "marks": [
+                        \"type\": \"text\",
+                        \"text\": \"$PR_URL\",
+                        \"marks\": [
                           {
-                            "type": "link",
-                            "attrs": {
-                              "href": "${{ github.event.pull_request.html_url }}"
+                            \"type\": \"link\",
+                            \"attrs\": {
+                              \"href\": \"$PR_URL\"
                             }
                           }
                         ]
@@ -58,4 +61,4 @@ jobs:
                   }
                 ]
               }
-            }'
+            }"
