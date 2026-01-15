@@ -1,62 +1,83 @@
-name: Create PR Link in Jira
+name: Add PR link to Jira
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, edited]
 
 jobs:
-  link-jira:
+  jira-link:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Extract Jira ID from PR template
-        id: jira
+      - name: Extract Jira ID from PR body
+        id: extract
         uses: actions/github-script@v7
         with:
           script: |
             const body = context.payload.pull_request.body || '';
             const match = body.match(/[A-Z][A-Z0-9]+-\d+/);
-
             if (!match) {
-              core.setFailed('No Jira issue key found in PR template');
+              core.setFailed("No Jira issue key found in PR body");
               return;
             }
+            return match[0];
+          result-encoding: string
 
-            core.setOutput('jira_key', match[0]);
+      - name: Add PR link to Jira Issue Links
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const jiraKey = '${{ steps.extract.outputs.result }}';
+            const prUrl = github.event.pull_request.html_url;
+            const prTitle = github.event.pull_request.title;
 
-      - name: Create PR link in Jira
-        run: |
-          curl -X POST \
-            -u "${{ secrets.JIRA_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.jira.outputs.jira_key }}/remotelink" \
-            -d '{
-              "body": {
-                "type": "doc",
-                "version": 1,
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "content": [
-                      {
-                        "type": "text",
-                        "text": "Pull Request created: "
-                      },
-                      {
-                        "type": "text",
-                        "text": "${{ github.event.pull_request.html_url }}",
-                        "marks": [
-                          {
-                            "type": "link",
-                            "attrs": {
-                              "href": "${{ github.event.pull_request.html_url }}"
-                            }
-                          }
-                        ]
-                      }
-                    ]
+            const response = await fetch(`${process.env.JIRA_BASE_URL}/rest/api/3/issue/${jiraKey}/remotelink`, {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Basic ' + Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64'),
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                object: {
+                  url: prUrl,
+                  title: `GitHub PR: ${prTitle}`,
+                  icon: {
+                    url16x16: "https://github.githubassets.com/favicon.ico",
+                    title: "GitHub"
                   }
-                ]
-              }
-            }'
+                }
+              })
+            });
 
+            const data = await response.json();
+            console.log('Jira Remote Link Response:', data);
+
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+      - name: Update PR body to include Jira link (optional)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const jiraKey = '${{ steps.extract.outputs.result }}';
+            const jiraUrl = `${process.env.JIRA_BASE_URL}/browse/${jiraKey}`;
+            const prNumber = github.event.pull_request.number;
+            const currentBody = github.event.pull_request.body || '';
+
+            if (!currentBody.includes(jiraUrl)) {
+              const newBody = `${currentBody}\n\n[Jira Issue ${jiraKey}](${jiraUrl})`;
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                body: newBody
+              });
+              console.log(`Added Jira link to PR body: ${jiraUrl}`);
+            } else {
+              console.log('PR body already contains Jira link.');
+            }
+
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
