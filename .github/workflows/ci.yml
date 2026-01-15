@@ -30,7 +30,7 @@ jobs:
             const prUrl = github.event.pull_request.html_url;
             const prTitle = github.event.pull_request.title;
 
-            const response = await fetch(`${process.env.JIRA_BASE_URL}/rest/api/3/issue/${jiraKey}/remotelink`, {
+            const response = await fetch(`${process.env.JIRA_BASE_URL}/rest/api/3/issue/${jiraKey}/comment`, {
               method: 'POST',
               headers: {
                 'Authorization': 'Basic ' + Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64'),
