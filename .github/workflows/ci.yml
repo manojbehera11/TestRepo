@@ -29,7 +29,7 @@ jobs:
           curl -X POST \
             -u "${{ secrets.JIRA_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" \
             -H "Content-Type: application/json" \
-            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.jira.outputs.jira_key }}/comment" \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue/${{ steps.jira.outputs.jira_key }}/remotelink" \
             -d '{
               "body": {
                 "type": "doc",
